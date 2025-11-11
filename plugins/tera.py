@@ -24,11 +24,11 @@ from config import CHANNEL, DATABASE
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
 
-------------------------
+#------------------------
 
-Mongo setup
+#Mongo setup
 
-------------------------
+#------------------------
 
 mongo_client = MongoClient(DATABASE.URI) db = mongo_client[DATABASE.NAME]
 
@@ -36,13 +36,13 @@ settings_col = db["terabox_settings"] queue_col = db["terabox_queue"] last_uploa
 
 TERABOX_REGEX = r'https?://(?:www.)?[^/\s]tera[^/\s].[a-z]+/s/[^\s]+'
 
-------------------------
+#------------------------
 
-Cookie / Headers
+#Cookie / Headers
 
-------------------------
+#------------------------
 
-NOTE: User-provided full cookie string is here. You can replace with only ndus=... if repo owner confirmed.
+#NOTE: User-provided full cookie string is here. You can replace with only ndus=... if repo owner confirmed.
 
 COOKIE = '__stripe_mid=7e85521c-2999-45d7-ad52-bccacc21be947d0744; __bid_n=19a43e782d674d36734207; _fbp=fb.1.1762075873135.776639740404065926; _ga=GA1.1.282403741.1762075873; _ga_06ZNKL8C2E=GS2.1.s1762850111$o4$g1$t1762850261$j54$l0$h0; _ga_HSVH9T016H=GS2.1.s1762341284$o2$g0$t1762341294$j50$l0$h0; _gcl_au=1.1.1986755109.1762075873; _rdt_em=:8c949e87cf16da80bc494a2b04c66a66ab63f6cac4155aa378c602c7343e0ba5,6c504c8f9f1f97ea213fb77179f0ceccf015deda3a8ad59208b066452d8a6d39,3695d266e9d1697a120ec443ba9a580cae31e3f076644205d4ad84d2ce22f6cd,3f029b132f44ca54cebf9b27b34c1f6087f0c9227dcea03d88ca50c29442d602,ca07ca59d63d2c83c70717803f86aa00d3e8080256ca30d52342667274ae5b61; _rdt_uuid=1762075874081.ee3d8dd2-22ed-4ff4-a0de-5fdbf3d06761; ab_sr=1.0.1_NTAzYzBmNjc2NTIzZWMxOTBhOGY2MTRmNjdjZWE4ZTc1ZjU3MWYxNjdjMjgyNWY4OTZmZGY5ODNjZTRiNGM1NTIxYzkzYzdhMGMwZjQ3OTQ5YzBjZDMwMDAyNjMxYmI0YTc0NWEyYjcxMjY0MjA1ZjU2YWMwZGQxMTZkYTM1MWY2N2ZkNzYzYTgyYjQ0ZWFiMjBiMzMyNWUxZDBlNjczMQ==; ab_ymg_result={"data":"2a91d703c9b896b9975b076a358035892ab22e34798473aa79bf41650dee64e4fea2a42fecdc3dd3eded908aeb7ff3efd59ce35f91f9c20c152f0edb7c3b53f8a1b7584bba7fc36ec38fec8028d0330bd3a64aefef181fd74a2888f4cd7a9f3b53554633be313f18f54292a969d1c308847df89f5aba50e8d1112df821a6f6862cd38eac3c5ec1f1d1c592cbfaeb1dab","key_id":"66","sign":"cf528be1"}; browserid=5yTxW5LU80WcPn24U6mOqQv_NJBIGnAnfLB3IagjxhvjoduhXlelAcAfOr4=; lang=en; ndus=YfMjGd9peHuiCNXDDN-XZo7gqMIEDpy0X4J3VIGX'
 
@@ -50,11 +50,11 @@ HEADERS = { "Accept": "application/json, text/plain, /", "Accept-Encoding": "gzi
 
 DL_HEADERS = { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) " "AppleWebKit/537.36 (KHTML, like Gecko) " "Chrome/91.0.4472.124 Safari/537.36", "Accept": "text/html,application/xhtml+xml,application/xml;" "q=0.9,image/webp,/;q=0.8", "Accept-Language": "en-US,en;q=0.5", "Referer": "https://www.terabox.com/", "DNT": "1", "Connection": "keep-alive", "Upgrade-Insecure-Requests": "1", "Cookie": COOKIE, }
 
-------------------------
+#------------------------
 
-Utils
+#Utils
 
-------------------------
+#------------------------
 
 def get_size(bytes_len: int) -> str: if bytes_len >= 1024 ** 3: return f"{bytes_len / 10243:.2f} GB" if bytes_len >= 1024 ** 2: return f"{bytes_len / 10242:.2f} MB" if bytes_len >= 1024: return f"{bytes_len / 1024:.2f} KB" return f"{bytes_len} bytes"
 
@@ -64,11 +64,11 @@ Build a requests session with retries
 
 def build_session(): s = requests.Session() s.headers.update(HEADERS) retries = Retry( total=5, backoff_factor=1, status_forcelist=(429, 500, 502, 503, 504), allowed_methods=frozenset(['GET', 'POST']) ) s.mount("https://", HTTPAdapter(max_retries=retries)) s.mount("http://", HTTPAdapter(max_retries=retries)) return s
 
-------------------------
+#------------------------
 
-Core: get_file_info (robust)
+#Core: get_file_info (robust)
 
-------------------------
+#------------------------
 
 def get_file_info(share_url: str) -> dict: session = build_session() try: resp = session.get(share_url, allow_redirects=True, timeout=20) except requests.exceptions.RequestException as ex: raise ValueError(f"Failed to fetch share page: {ex}")
 
@@ -139,11 +139,11 @@ return {
     "final_url": final_url,
 }
 
-------------------------
+#------------------------
 
-Handler: download & upload
+#Handler: download & upload
 
-------------------------
+#------------------------
 
 @Client.on_message(filters.private & filters.regex(TERABOX_REGEX)) async def handle_terabox(client, message: Message): user_id = message.from_user.id
 
