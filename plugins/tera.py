@@ -1,6 +1,6 @@
 #please give credits https://github.com/MN-BOTS
 
-@MrMNTG @MusammilN
+# @MrMNTG @MusammilN
 
 # please give credits https://github.com/MN-BOTS
 #  @MrMNTG @MusammilN
