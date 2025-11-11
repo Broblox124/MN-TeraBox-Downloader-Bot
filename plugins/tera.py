@@ -33,9 +33,11 @@ TERABOX_REGEX = r'https?://(?:www\.)?[^/\s]*tera[^/\s]*\.[a-z]+/s/[^\s]+'
 # ------------------------
 # Cookie / Headers
 # ------------------------
-# NOTE: full cookie string — if repo owner insists only ndus is required,
-# replace COOKIE value with 'ndus=YOUR_VALUE' (single-quoted).
-COOKIE = '__stripe_mid=7e85521c-2999-45d7-ad52-bccacc21be947d0744; __bid_n=19a43e782d674d36734207; _fbp=fb.1.1762075873135.776639740404065926; _ga=GA1.1.282403741.1762075873; _ga_06ZNKL8C2E=GS2.1.s1762850111$o4$g1$t1762850261$j54$l0$h0; _ga_HSVH9T016H=GS2.1.s1762341284$o2$g0$t1762341294$j50$l0$h0; _gcl_au=1.1.1986755109.1762075873; _rdt_em=:8c949e87cf16da80bc494a2b04c66a66ab63f6cac4155aa378c602c7343e0ba5,6c504c8f9f1f97ea213fb77179f0ceccf015deda3a8ad59208b066452d8a6d39,3695d266e9d1697a120ec443ba9a580cae31e3f076644205d4ad84d2ce22f6cd,3f029b132f44ca54cebf9b27b34c1f6087f0c9227dcea03d88ca50c29442d602,ca07ca59d63d2c83c70717803f86aa00d3e8080256ca30d52342667274ae5b61; _rdt_uuid=1762075874081.ee3d8dd2-22ed-4ff4-a0de-5fdbf3d06761; ab_sr=1.0.1_NTAzYzBmNjc2NTIzZWMxOTBhOGY2MTRmNjdjZWE4ZTc1ZjU3MWYxNjdjMjgyNWY4OTZmZGY5ODNjZTRiNGM1NTIxYzkzYzdhMGMwZjQ3OTQ5YzBjZDMwMDAyNjMxYmI0YTc0NWEyYjcxMjY0MjA1ZjU2YWMwZGQxMTZkYTM1MWY2N2ZkNzYzYTgyYjQ0ZWFiMjBiMzMyNWUxZDBlNjczMQ==; ab_ymg_result={"data":"2a91d703c9b896b9975b076a358035892ab22e34798473aa79bf41650dee64e4fea2a42fecdc3dd3eded908aeb7ff3efd59ce35f91f9c20c152f0edb7c3b53f8a1b7584bba7fc36ec38fec8028d0330bd3a64aefef181fd74a2888f4cd7a9f3b53554633be313f18f54292a969d1c308847df89f5aba50e8d1112df821a6f6862cd38eac3c5ec1f1d1c592cbfaeb1dab","key_id":"66","sign":"cf528be1"}; browserid=5yTxW5LU80WcPn24U6mOqQv_NJBIGnAnfLB3IagjxhvjoduhXlelAcAfOr4=; lang=en; ndus=YfMjGd9peHuiCNXDDN-XZo7gqMIEDpy0X4J3VIGX'
+# By default use only ndus cookie (less brittle). Replace with full cookie string if needed.
+COOKIE = 'ndus=YfMjGd9peHuiCNXDDN-XZo7gqMIEDpy0X4J3VIGX'
+
+# Use a mobile User-Agent (often returns simpler HTML)
+MOBILE_UA = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
 
 HEADERS = {
     "Accept": "application/json, text/plain, */*",
@@ -43,28 +45,22 @@ HEADERS = {
     "Accept-Language": "en-US,en;q=0.9,hi;q=0.8",
     "Connection": "keep-alive",
     "DNT": "1",
-    # Use .com host (important)
     "Host": "www.terabox.com",
     "Upgrade-Insecure-Requests": "1",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                  "AppleWebKit/537.36 (KHTML, like Gecko) "
-                  "Chrome/135.0.0.0 Safari/537.36 Edg/135.0.0.0",
-    "sec-ch-ua": '"Microsoft Edge";v="135", "Not-A.Brand";v="8", "Chromium";v="135"',
+    "User-Agent": MOBILE_UA,
+    "sec-ch-ua": '"Chromium";v="120", "Google Chrome";v="120"',
     "Sec-Fetch-Dest": "document",
     "Sec-Fetch-Mode": "navigate",
     "Sec-Fetch-Site": "none",
     "Sec-Fetch-User": "?1",
     "Cookie": COOKIE,
-    "sec-ch-ua-mobile": "?0",
-    "sec-ch-ua-platform": '"Windows"',
+    "sec-ch-ua-mobile": "?1",
+    "sec-ch-ua-platform": '"Android"',
 }
 
 DL_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                  "AppleWebKit/537.36 (KHTML, like Gecko) "
-                  "Chrome/91.0.4472.124 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;"
-              "q=0.9,image/webp,*/*;q=0.8",
+    "User-Agent": MOBILE_UA,
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.5",
     "Referer": "https://www.terabox.com/",
     "DNT": "1",
@@ -110,7 +106,30 @@ def build_session():
 
 
 # ------------------------
-# Core: get_file_info (aggressive extractor)
+# Fallback HTML dlink extractor
+# ------------------------
+def try_extract_dlink_from_html(html: str) -> str:
+    # 1) direct dlink-like tokens
+    m = re.search(r'(https?://[^\s"\'<>]+dlink[^\s"\'<>]+)', html)
+    if m:
+        return m.group(1)
+    # 2) data-dlink attribute
+    m = re.search(r'data-dlink="([^"]+)"', html)
+    if m:
+        return m.group(1)
+    # 3) potential direct file URLs
+    m = re.search(r'(https?://[^\s"\'<>]+\.(?:mp4|mkv|jpg|jpeg|png|pdf|zip|rar))', html)
+    if m:
+        return m.group(1)
+    # 4) sometimes `file_url` or similar inside scripts
+    m = re.search(r'file_url"\s*:\s*"([^"]+)"', html)
+    if m:
+        return m.group(1)
+    return ""
+
+
+# ------------------------
+# Core: get_file_info (aggressive extractor + fallback)
 # ------------------------
 
 def get_file_info(share_url: str) -> dict:
@@ -125,12 +144,19 @@ def get_file_info(share_url: str) -> dict:
         raise ValueError(f"Failed to fetch share page ({resp.status_code})")
 
     final_url = resp.url
+    # ensure session will use referer and host for subsequent requests
     session.headers.update({"Referer": final_url, "Host": "www.terabox.com"})
     html = resp.text or ""
 
     # debug info
     print(f"[TERA DEBUG] final_url={final_url}")
     print(f"[TERA DEBUG] html_len={len(html)}")
+
+    # quick detect: extraction code / password prompt
+    lower_html = html.lower()
+    if "please input the extraction code" in lower_html or "请输入提取码" in lower_html or "input the extraction code" in lower_html:
+        # signal handler: this link requires an extraction code
+        raise ValueError("PASSWORD_REQUIRED")
 
     # helper: try list of regexes against a text blob
     def try_patterns(text, patterns):
@@ -190,14 +216,30 @@ def get_file_info(share_url: str) -> dict:
             bdstoken = bdstoken or try_patterns(jb, bdstoken_patterns)
         print(f"[TERA DEBUG] json-scan tokens js={bool(js_token)} logid={bool(logid)} bdstoken={bool(bdstoken)} json_blobs={len(json_blobs)}")
 
-    # 4) final check
+    # 4) fallback: try to find a direct dlink/file URL in HTML (no tokens required)
     if not all([js_token, logid, bdstoken]):
-        # print a slightly longer html preview (safe): first 3000 chars, sanitized
-        preview = html.replace('\n', ' ').replace('\r', ' ')[:3000]
-        raise ValueError(
-            "Failed to extract authentication tokens. final_url="
-            f"{final_url} html_preview={preview}"
-        )
+        fallback = try_extract_dlink_from_html(html)
+        if fallback:
+            print(f"[TERA DEBUG] fallback dlink found in HTML: {fallback[:200]}")
+            # Build a minimal info dict using fallback direct link
+            size_bytes = 0
+            try:
+                head = requests.head(fallback, headers=DL_HEADERS, allow_redirects=True, timeout=10)
+                size_bytes = int(head.headers.get("Content-Length", 0) or 0)
+            except Exception:
+                size_bytes = 0
+            return {
+                "name": os.path.basename(urlparse(fallback).path) or "download",
+                "download_link": fallback,
+                "size_bytes": size_bytes,
+                "size_str": get_size(size_bytes),
+                "final_url": final_url,
+            }
+
+    # 5) final token check
+    if not all([js_token, logid, bdstoken]):
+        preview = html.replace("\n", " ").replace("\r", " ")[:3000]
+        raise ValueError(f"Failed to extract authentication tokens. final_url={final_url} html_preview={preview}")
 
     # build params and call list
     params = {
@@ -262,6 +304,10 @@ async def handle_terabox(client, message: Message):
     try:
         info = get_file_info(url)
     except Exception as e:
+        if str(e) == "PASSWORD_REQUIRED":
+            # save pending share for user in DB and prompt for code (later you can add /pass handler)
+            settings_col.update_one({"user_id": user_id}, {"$set": {"pending_share": url}}, upsert=True)
+            return await message.reply("🔐 This link requires an extraction code. Reply with: /pass <code>")
         return await message.reply(f"❌ Failed to get file info:\n{e}")
 
     temp_path = os.path.join(tempfile.gettempdir(), info["name"])
